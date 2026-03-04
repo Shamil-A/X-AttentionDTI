@@ -16,7 +16,9 @@ export default function Predict() {
     setResult(null);
 
     try {
-      const response = await axios.post('http://127.0.0.1:5000/api/predict', {
+      // Swapped local URL for your new 16GB Hugging Face backend!
+      // Note: Make sure your Flask app.py route matches '/api/predict' or just '/predict'
+      const response = await axios.post('https://shamil777-x-attentiondti.hf.space/api/predict', {
         smiles,
         protein
       });
@@ -33,7 +35,7 @@ export default function Predict() {
     setSmiles('');
     setProtein('');
     setResult(null);
-    setError(null);
+    error(null);
   };
 
   // Function to load sample data (Imatinib + standard target)
