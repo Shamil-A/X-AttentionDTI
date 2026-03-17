@@ -14,10 +14,10 @@ export default function NetworkBackground() {
       options={{
         fullScreen: {
           enable: true,
-          zIndex: -1 // This forces it behind your content securely
+          zIndex: -1 
         },
         background: {
-          color: { value: "#f9fafb" }, // This acts as your new page background
+          color: { value: "#08090f" }, // Matches your exact --color-brand-bg
         },
         fpsLimit: 60,
         interactivity: {
@@ -30,18 +30,18 @@ export default function NetworkBackground() {
           modes: {
             grab: {
               distance: 140,
-              links: { opacity: 0.5, color: "#2563eb" },
+              links: { opacity: 0.6, color: "#38d9f5" }, // Grabs light up in Cyan!
             },
           },
         },
         particles: {
-          color: { value: "#93c5fd" },
+          color: { value: "#7c6cf4" }, // Particles are now your brand Purple
           links: {
-            color: "#bfdbfe",
+            color: "#6b7280", // Links are subtle muted gray
             distance: 150,
             enable: true,
-            opacity: 0.4,
-            width: 1.5,
+            opacity: 0.3,
+            width: 1.2,
           },
           move: {
             direction: "none",
@@ -55,7 +55,7 @@ export default function NetworkBackground() {
             density: { enable: true, area: 800 },
             value: 60,
           },
-          opacity: { value: 0.5 },
+          opacity: { value: 0.6 },
           shape: { type: "circle" },
           size: { value: { min: 1, max: 3 } },
         },

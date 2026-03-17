@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+@theme {
+  /* Injecting the exact colors from your explainer */
+  --color-brand-bg: #08090f;
+  --color-brand-surface: #111320;
+  --color-brand-surface2: #1a1e35;
+  --color-brand-accent: #7c6cf4;
+  --color-brand-accent2: #38d9f5;
+  --color-brand-text: #e8eaf0;
+  --color-brand-muted: #6b7280;
+  --color-brand-border: #1f2340;
+}
+
+/* Force the whole website background to go dark instantly */
+body {
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-text);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+}
