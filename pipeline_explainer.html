@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Drug-Target Affinity Pipeline — Visual Explainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#08090f;--surface:#111320;--surface2:#1a1e35;--accent:#7c6cf4;--accent2:#38d9f5;--accent3:#f97316;--accent4:#22c55e;
+  --text:#e8eaf0;--muted:#6b7280;--border:#1f2340;
+  --grad:linear-gradient(135deg,#7c6cf4 0%,#38d9f5 100%);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.6}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(8,9,15,.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);padding:.75rem 2rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+nav a{font-size:.75rem;font-weight:600;color:var(--muted);text-decoration:none;padding:.3rem .7rem;border-radius:6px;
+  transition:all .2s;white-space:nowrap}
+nav a:hover,nav a.active{background:var(--surface2);color:var(--accent)}
+.nav-logo{font-weight:900;font-size:1rem;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:1rem}
+
+/* SECTIONS */
+section{min-height:100vh;padding:7rem 2rem 4rem;max-width:1100px;margin:auto}
+.section-label{font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:.5rem}
+h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:900;line-height:1.1;margin-bottom:1rem}
+h2{font-size:clamp(1.4rem,3vw,2rem);font-weight:800;margin-bottom:.75rem}
+h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem;color:var(--accent2)}
+p{color:#b0b8d0;margin-bottom:.8rem;max-width:72ch}
+.grad-text{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.2rem}
+.card-row{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+@media(max-width:640px){.card-row{grid-template-columns:1fr}}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;padding:.2rem .6rem;border-radius:99px;margin:.15rem}
+.tag-bond{background:#1e3a5f;color:#60a5fa}
+.tag-ring{background:#2d1e5f;color:#a78bfa}
+.tag-env{background:#1e4a2d;color:#4ade80}
+.tag-warn{background:#3f1515;color:#f87171}
+.tag-ok{background:#0f3320;color:#34d399}
+.mono{font-family:'JetBrains Mono',monospace;font-size:.82rem}
+.pill{display:inline-flex;align-items:center;gap:.3rem;background:var(--surface2);border-radius:8px;padding:.3rem .7rem;font-size:.8rem;margin:.2rem}
+.pill-val{color:var(--accent2);font-weight:700}
+
+/* HERO */
+#hero{display:flex;flex-direction:column;justify-content:center;text-align:center;align-items:center;min-height:100vh;padding-top:5rem}
+.hero-sub{font-size:1.05rem;color:var(--muted);max-width:60ch;text-align:center;margin:.5rem auto 2rem}
+.scroll-hint{animation:bounce 2s infinite;margin-top:2.5rem;color:var(--muted);font-size:.85rem}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+.badge-row{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1.2rem 0}
+.badge{padding:.35rem 1rem;border-radius:99px;font-size:.8rem;font-weight:700;border:1px solid}
+.badge-purple{border-color:#7c6cf4;color:#a89cf7}
+.badge-cyan{border-color:#38d9f5;color:#67e3f9}
+.badge-orange{border-color:#f97316;color:#fb923c}
+
+/* SMILES vs HYPERGRAPH */
+.compare-box{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;min-height:260px}
+.compare-box h3{color:var(--accent2);margin-bottom:1rem}
+.smiles-str{font-family:'JetBrains Mono',monospace;font-size:.9rem;color:#f97316;word-break:break-all;line-height:1.8;background:#0d0f1a;padding:.8rem 1rem;border-radius:10px;border:1px solid #2a1e0e}
+.vs-badge{display:flex;align-items:center;justify-content:center;padding:.5rem 0;font-size:1.5rem;font-weight:900;color:var(--accent);opacity:.6}
+
+/* GRAPH CANVAS */
+canvas{border-radius:12px;background:#0b0d1a;display:block;width:100%;max-height:340px}
+
+/* PIPELINE FLOW */
+.flow{display:flex;flex-direction:column;gap:0}
+.flow-step{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.4rem;position:relative;margin-bottom:.3rem}
+.flow-step::after{content:'▼';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);color:var(--accent);font-size:.85rem;z-index:1}
+.flow-step:last-child::after{display:none}
+.flow-step-num{font-size:.65rem;font-weight:800;color:var(--accent);letter-spacing:.1em;text-transform:uppercase}
+.flow-inner{display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-top:.3rem}
+.tensor-chip{background:#0e1025;border:1px solid #252848;border-radius:8px;padding:.35rem .75rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#a5b4fc}
+
+/* ATTENTION HEATMAP */
+#heatmap-canvas{border-radius:10px;cursor:crosshair}
+.attn-legend{display:flex;gap:.5rem;align-items:center;font-size:.75rem;margin-top:.5rem}
+.attn-grad{width:120px;height:12px;border-radius:4px;background:linear-gradient(to right,#0b0d1a,#38d9f5)}
+
+/* LOSS */
+.loss-bar-wrap{background:#0e1025;border-radius:10px;height:26px;overflow:hidden;margin:.3rem 0}
+.loss-bar{height:100%;border-radius:10px;transition:width 1s ease;display:flex;align-items:center;padding-left:.6rem;font-size:.72rem;font-weight:700;white-space:nowrap}
+
+/* PREDICTION */
+.pred-box{background:linear-gradient(135deg,#111a30,#0c1220);border:1px solid #2a3460;border-radius:16px;padding:2rem;text-align:center}
+.pred-num{font-size:3.5rem;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.pred-label{font-size:.8rem;color:var(--muted);margin-top:.3rem}
+.error-badge{display:inline-block;padding:.4rem 1.2rem;border-radius:99px;background:#0f2518;color:#4ade80;font-weight:700;margin-top:.8rem;font-size:.9rem}
+
+/* TABS */
+.tabs{display:flex;gap:.3rem;margin-bottom:1rem}
+.tab-btn{padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);
+  font-family:'Inter',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s}
+.tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* WHY BOX */
+.why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:1rem}
+.why-card{background:var(--surface2);border-radius:12px;padding:1.2rem;border-left:3px solid var(--accent)}
+.why-card.cyan{border-left-color:var(--accent2)}
+.why-card.orange{border-left-color:var(--accent3)}
+.why-card.green{border-left-color:var(--accent4)}
+.why-icon{font-size:1.5rem;margin-bottom:.4rem}
+.why-card h4{font-size:.9rem;font-weight:700;margin-bottom:.3rem}
+.why-card p{font-size:.8rem;margin:0}
+
+/* ANIMATE IN */
+.fade-in{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+
+/* FEAT TOOLTIP */
+#feat-tip{position:fixed;z-index:999;pointer-events:none;opacity:0;transition:opacity .15s;
+  background:#12172e;border:1px solid #2e3460;border-radius:12px;padding:.8rem 1rem;
+  min-width:220px;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,.6);font-size:.78rem}
+#feat-tip .ft-group{font-weight:800;font-size:.85rem;margin-bottom:.25rem}
+#feat-tip .ft-range{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#a5b4fc;margin-bottom:.2rem}
+#feat-tip .ft-type{display:inline-block;padding:.1rem .45rem;border-radius:99px;font-size:.65rem;font-weight:700;margin-bottom:.35rem}
+#feat-tip .ft-desc{color:#9ca3af;line-height:1.4;margin-bottom:.3rem}
+#feat-tip .ft-val{font-family:'JetBrains Mono',monospace;color:#38d9f5;font-weight:700}
+.feat-cell{width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:default;
+  transition:transform .15s,box-shadow .15s;flex-shrink:0}
+.feat-cell:hover{transform:scale(1.4);box-shadow:0 0 8px currentColor;z-index:2}
+.feat-cell.hl-dim{opacity:.2}
+.feat-cell.hl-bright{transform:scale(1.2);box-shadow:0 0 6px currentColor}
+/* GROUP RAIL */
+.group-rail{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:0;margin-bottom:4px;padding-bottom:2px}
+.group-seg{display:flex;align-items:center;justify-content:center;border-radius:3px 3px 0 0;
+  font-size:.6rem;font-weight:700;white-space:nowrap;overflow:hidden;padding:2px 3px}
+/* scrollbar */
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#08090f}::-webkit-scrollbar-thumb{background:#2a2d50;border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">KIBAp2</span>
+  <a href="#hero">Home</a>
+  <a href="#smiles-vs-hyper">SMILES vs Hypergraph</a>
+  <a href="#hypergraph">Hypergraph Deep-Dive</a>
+  <a href="#protein">Protein Encoder</a>
+  <a href="#fusion">Teacher-Student Fusion</a>
+  <a href="#attention">Cross-Attention</a>
+  <a href="#mlp">MLP Predictor</a>
+  <a href="#loss">Loss</a>
+  <a href="#result">Result</a>
+</nav>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section id="hero">
+  <div class="section-label">Drug-Target Affinity Prediction</div>
+  <h1>How <span class="grad-text">KIBAp2</span> Predicts<br/>Drug Binding Affinity</h1>
+  <p class="hero-sub">An interactive, step-by-step walkthrough of the full pipeline — from a drug SMILES string and protein sequence to a predicted KIBA affinity score.</p>
+  <div class="badge-row">
+    <span class="badge badge-purple">🧪 Hypergraph Drug Encoder</span>
+    <span class="badge badge-cyan">🧬 ESM-2 Protein Encoder</span>
+    <span class="badge badge-orange">⚡ Cross-Attention Fusion</span>
+    <span class="badge badge-purple">🎓 Knowledge Distillation</span>
+  </div>
+  <div class="card" style="max-width:640px;text-align:left;margin-top:1rem">
+    <div class="section-label">Example Input (Row 0 of test.csv)</div>
+    <p style="font-size:.8rem;color:var(--muted);margin:.3rem 0">Drug SMILES:</p>
+    <div class="smiles-str">Cn1nc(C(F)(F)F)c2c(=O)c3cc(Cl)ccc3n(O)c21</div>
+    <p style="font-size:.8rem;color:var(--muted);margin:.6rem 0 .3rem">Protein (first 50 AA of 1000):</p>
+    <div class="smiles-str" style="color:#34d399">MANDSPAKSLVDIDLSSLRDPAGIFELVEVVGNGTYGQVYKGRHVKTGQL…</div>
+  </div>
+  <div class="scroll-hint">↓ Scroll to explore the pipeline</div>
+</section>
+
+<!-- ═══════════ SMILES vs HYPERGRAPH ═══════════ -->
+<section id="smiles-vs-hyper" class="fade-in">
+  <div class="section-label">Step 1 — Drug Representation</div>
+  <h2>Why Hypergraphs? <span class="grad-text">SMILES isn't enough.</span></h2>
+  <p>A SMILES string encodes a molecule as a linear text. It contains all the atoms and bonds, but it's a <em>1-D sequence</em> — it can't natively represent the structural relationships that matter for binding.</p>
+
+  <div class="card-row" style="margin-top:1.5rem">
+    <div class="compare-box">
+      <h3>❌ SMILES String</h3>
+      <div class="smiles-str">Cn1nc(C(F)(F)F)c2c(=O)<br/>c3cc(Cl)ccc3n(O)c21</div>
+      <br/>
+      <div class="why-card" style="border-left-color:#f87171;margin-top:.5rem">
+        <div class="why-icon">⚠️</div>
+        <h4>Limitations</h4>
+        <p style="font-size:.78rem">Linear sequence — same molecule has multiple valid SMILES. Rings and multi-atom environments aren't first-class. CNNs / LSTMs must learn structure from scratch.</p>
+      </div>
+    </div>
+    <div class="compare-box">
+      <h3>✅ Hypergraph</h3>
+      <canvas id="mol-canvas" width="420" height="240"></canvas>
+      <div style="margin-top:.6rem;display:flex;gap:.4rem;flex-wrap:wrap">
+        <span class="tag tag-bond">● Bond edges</span>
+        <span class="tag tag-ring">● Ring hyperedges</span>
+        <span class="tag tag-env">● Env hyperedges</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="why-grid" style="margin-top:1.5rem">
+    <div class="why-card"><div class="why-icon">🔗</div><h4>Multi-way Relationships</h4><p>A hyperedge can connect 3, 4 or more atoms simultaneously — e.g. an entire aromatic ring is ONE hyperedge. SMILES can't do this.</p></div>
+    <div class="why-card cyan"><div class="why-icon">🌀</div><h4>Ring Awareness Built In</h4><p>Ring membership is an explicit structural hyperedge — the model knows aromaticity before any training step.</p></div>
+    <div class="why-card orange"><div class="why-icon">🌐</div><h4>Local Chemical Environment</h4><p>Each atom gets an "environment" hyperedge covering its 1-hop neighbourhood — capturing functional-group context efficiently.</p></div>
+    <div class="why-card green"><div class="why-icon">🚀</div><h4>SMILES-Invariant</h4><p>The hypergraph is built from the RDKit graph, not the string. It's the same structure regardless of which SMILES notation you write.</p></div>
+  </div>
+</section>
+
+<!-- ═══════════ HYPERGRAPH DEEP DIVE ═══════════ -->
+<section id="hypergraph" class="fade-in">
+  <div class="section-label">Step 1b — Hypergraph Construction</div>
+  <h2>Inside the <span class="grad-text">Hypergraph</span></h2>
+  <p>From the 21-atom, 23-bond molecule we build <strong>47 hyperedges</strong> across three types. Each atom is a node with a 49-dimensional feature vector.</p>
+
+  <div class="tabs" style="margin-top:1.5rem">
+    <button class="tab-btn active" onclick="switchTab('hg','atoms')">Atom Features</button>
+    <button class="tab-btn" onclick="switchTab('hg','edges')">Hyperedges</button>
+    <button class="tab-btn" onclick="switchTab('hg','message')">Message Passing</button>
+  </div>
+
+  <!-- ATOMS TAB -->
+  <div id="hg-atoms" class="tab-panel active card">
+    <h3>Node Feature Vector (49-dim per atom)</h3>
+    <p style="font-size:.82rem">Atom 0 (Nitrogen in the N-CH₃ group) — hover any cell for details, click a legend chip to highlight its group:</p>
+    <!-- group-range rail rendered by JS -->
+    <div id="feat-rail" class="group-rail"></div>
+    <div id="feat-grid" style="display:flex;flex-wrap:nowrap;gap:3px;margin-bottom:.5rem;overflow-x:auto;padding-bottom:4px"></div>
+    <!-- legend -->
+    <div id="feat-legend" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.6rem"></div>
+  </div>
+
+  <!-- EDGES TAB -->
+  <div id="hg-edges" class="tab-panel card">
+    <h3>47 Hyperedges = 23 Bond + 3 Ring + 21 Env</h3>
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+      <thead><tr style="color:var(--muted);border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:.4rem .6rem">#</th>
+        <th style="text-align:left;padding:.4rem .6rem">Type</th>
+        <th style="text-align:left;padding:.4rem .6rem">Atoms</th>
+        <th style="text-align:left;padding:.4rem .6rem">Meaning</th>
+      </tr></thead>
+      <tbody id="edge-table"></tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- MESSAGE PASSING TAB -->
+  <div id="hg-message" class="tab-panel card">
+    <h3>3-Layer HypergraphConv Message Passing</h3>
+    <p style="font-size:.82rem">Each layer: Node → Hyperedge aggregation → Node update → Residual + LayerNorm + GELU</p>
+    <div style="margin-top:1rem">
+      <div id="mp-steps"></div>
+    </div>
+    <div style="margin-top:1rem;padding:1rem;background:#0b0d1a;border-radius:10px;border:1px solid #1f2340">
+      <p class="mono" style="color:#a5b4fc">Input: Linear(49 → 512) → [21, 512]</p>
+      <p class="mono" style="color:#7dd3fc;margin-top:.3rem">Layer 1 out: mean=0.086, max=3.781</p>
+      <p class="mono" style="color:#7dd3fc;margin-top:.2rem">Layer 2 out: mean=0.100, max=4.222</p>
+      <p class="mono" style="color:#7dd3fc;margin-top:.2rem">Layer 3 out: mean=0.043, max=4.438</p>
+      <p class="mono" style="color:#4ade80;margin-top:.3rem">GlobalMeanPool → drug_global [1, 512]</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ PROTEIN ENCODER ═══════════ -->
+<section id="protein" class="fade-in">
+  <div class="section-label">Step 2 & 3 — Protein Encoding</div>
+  <h2>Dual ESM-2 <span class="grad-text">Student-Teacher</span></h2>
+  <p>The protein sequence (1000 AA) is processed by two ESM-2 language models: a large frozen <em>teacher</em> (650M params) that provides rich embeddings, and a smaller trainable <em>student</em> (35M params) that learns to match it.</p>
+
+  <div class="card-row" style="margin-top:1.5rem">
+    <div class="card">
+      <div class="tag tag-bond">STUDENT — ESM-2 35M</div>
+      <h3 style="margin-top:.7rem">Online (Trainable)</h3>
+      <div class="pill">Layers <span class="pill-val">0–9 FROZEN</span></div>
+      <div class="pill">Layers <span class="pill-val">10–11 FINE-TUNED</span></div>
+      <div class="pill">Hidden dim <span class="pill-val">480</span></div>
+      <div class="pill">Projected to <span class="pill-val">512-d</span></div>
+      <br/>
+      <p class="mono" style="font-size:.75rem;color:#a5b4fc">Output: protein_seq [1, 1024, 512]<br/>student_cls [1, 512]</p>
+    </div>
+    <div class="card">
+      <div class="tag tag-ring">TEACHER — ESM-2 650M</div>
+      <h3 style="margin-top:.7rem">Offline (Completely Frozen)</h3>
+      <div class="pill">All layers <span class="pill-val">FROZEN</span></div>
+      <div class="pill">Precomputed <span class="pill-val">once</span></div>
+      <div class="pill">CLS dim <span class="pill-val">1280</span></div>
+      <div class="pill">Stored on disk <span class="pill-val">*.pt</span></div>
+      <br/>
+      <p class="mono" style="font-size:.75rem;color:#a5b4fc">Output: teacher_cls [1, 1280]<br/>(constant per protein)</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.2rem">
+    <h3>Token Sequence</h3>
+    <p style="font-size:.82rem">1000 real AA + 2 special tokens (BOS/EOS) → padded to 1024</p>
+    <div id="token-viz" style="display:flex;flex-wrap:wrap;gap:3px;margin-top:.7rem"></div>
+    <div style="display:flex;gap:1rem;font-size:.75rem;margin-top:.5rem">
+      <span style="color:#4ade80">■ Real AA tokens (1002)</span>
+      <span style="color:#374151">■ Padding (22 positions, masked)</span>
+      <span style="color:#f97316">■ CLS token → protein summary</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FUSION ═══════════ -->
+<section id="fusion" class="fade-in">
+  <div class="section-label">Step 6 — Knowledge Distillation Fusion</div>
+  <h2>Teacher-Student <span class="grad-text">Blending (λ=0.5)</span></h2>
+  <p>The student's CLS embedding is projected to 512-d (via <code>align_student</code>). The teacher's 1280-d CLS is also projected to 512-d (via <code>align_teacher</code>). These are blended with λ=0.5.</p>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px;background:#0e1025;border-radius:10px;padding:1rem;border:1px solid #252848">
+          <div class="section-label">Student CLS</div>
+          <div class="mono" style="color:#a78bfa;font-size:.8rem">[1, 512]</div>
+          <div class="mono" style="color:#6b7280;font-size:.72rem">align_student( Linear(512→512) )</div>
+          <div style="margin-top:.4rem;font-size:.8rem">First val: <span style="color:#a78bfa">0.469</span></div>
+        </div>
+        <div style="font-size:2rem;color:var(--accent)">+</div>
+        <div style="flex:1;min-width:180px;background:#0e1025;border-radius:10px;padding:1rem;border:1px solid #252848">
+          <div class="section-label">Teacher CLS</div>
+          <div class="mono" style="color:#60a5fa;font-size:.8rem">[1, 1280] → [1, 512]</div>
+          <div class="mono" style="color:#6b7280;font-size:.72rem">align_teacher( Linear(1280→512) )</div>
+          <div style="margin-top:.4rem;font-size:.8rem">First val: <span style="color:#60a5fa">0.035</span></div>
+        </div>
+        <div style="font-size:2rem;color:var(--accent)">→</div>
+        <div style="flex:1;min-width:180px;background:linear-gradient(135deg,#1a1235,#0d1e2e);border-radius:10px;padding:1rem;border:1px solid #3a3060">
+          <div class="section-label">Fused CLS</div>
+          <div class="mono" style="color:#38d9f5;font-size:.8rem">[1, 512]</div>
+          <div class="mono" style="color:#6b7280;font-size:.72rem">λ·s + (1-λ)·t = 0.5·s + 0.5·t</div>
+          <div style="margin-top:.4rem;font-size:.8rem">Injected at position 0 of protein_seq</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem">
+    <h3>Why Distillation?</h3>
+    <p style="font-size:.83rem">The 650M teacher has seen vastly more protein data and captures richer evolutionary context. By blending its frozen CLS into the student's sequence, the student's cross-attention can leverage 650M-level protein understanding with only 35M compute cost at inference.</p>
+    <div style="margin-top:.8rem;background:#0b0f1a;border-radius:8px;padding:.7rem 1rem">
+      <p class="mono" style="color:#4ade80;font-size:.8rem">Cosine similarity (student vs teacher after alignment) = <strong>0.999998</strong></p>
+      <p class="mono" style="color:#6b7280;font-size:.75rem">→ L_distill = 1 − 0.999998 = 0.000002 (nearly identical!)</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ CROSS-ATTENTION ═══════════ -->
+<section id="attention" class="fade-in">
+  <div class="section-label">Step 7 — Bidirectional Cross-Attention</div>
+  <h2>Drug ↔ Protein <span class="grad-text">Cross-Attention</span></h2>
+  <p>Two cross-attention heads let drug and protein <em>query each other</em> for binding-relevant information.</p>
+
+  <div class="tabs" style="margin-top:1.5rem">
+    <button class="tab-btn active" onclick="switchTab('attn','d2p')">D→P  (Drug queries Protein)</button>
+    <button class="tab-btn" onclick="switchTab('attn','p2d')">P→D  (Protein queries Drug)</button>
+  </div>
+
+  <div id="attn-d2p" class="tab-panel active card">
+    <h3>Drug attends to Protein</h3>
+    <p style="font-size:.82rem"><strong>Query</strong> = drug_global [1,1,512] &nbsp;|&nbsp; <strong>Key/Value</strong> = protein_seq [1,1024,512]</p>
+    <p style="font-size:.82rem;margin-top:.3rem">Output: <strong>d2p_out [1,512]</strong> — drug embedding enriched by protein context</p>
+    <canvas id="d2p-canvas" width="800" height="90" style="margin-top:1rem;width:100%;border-radius:8px"></canvas>
+    <div class="attn-legend"><div class="attn-grad"></div><span style="color:var(--muted)">Low → High attention</span></div>
+    <div style="margin-top:1rem">
+      <p style="font-size:.8rem;font-weight:700;color:var(--text)">Top protein positions the drug focuses on:</p>
+      <div id="d2p-top" style="margin-top:.4rem"></div>
+    </div>
+  </div>
+
+  <div id="attn-p2d" class="tab-panel card">
+    <h3>Protein attends to Drug Atoms</h3>
+    <p style="font-size:.82rem"><strong>Query</strong> = protein_seq [1,1024,512] &nbsp;|&nbsp; <strong>Key/Value</strong> = drug_nodes [1,21,512]</p>
+    <p style="font-size:.82rem;margin-top:.3rem">Output: masked mean pool → <strong>p2d_global [1,512]</strong> — protein embedding enriched by drug context</p>
+    <canvas id="p2d-canvas" width="800" height="90" style="margin-top:1rem;width:100%;border-radius:8px"></canvas>
+    <div class="attn-legend"><div class="attn-grad"></div><span style="color:var(--muted)">Low → High attention weight per drug atom</span></div>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem">max atom weight = 0.594 — one drug atom dominates!</p>
+  </div>
+</section>
+
+<!-- ═══════════ MLP ═══════════ -->
+<section id="mlp" class="fade-in">
+  <div class="section-label">Step 8 — MLP Predictor</div>
+  <h2>Three Vectors → <span class="grad-text">One Score</span></h2>
+  <p>The three 512-d summaries are concatenated into a 1536-d vector and passed through a 3-layer MLP.</p>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem">
+      <div class="tensor-chip">drug_global [512]</div>
+      <span style="color:var(--accent)">⊕</span>
+      <div class="tensor-chip">d2p_out [512]</div>
+      <span style="color:var(--accent)">⊕</span>
+      <div class="tensor-chip">p2d_global [512]</div>
+      <span style="color:var(--accent)">→</span>
+      <div class="tensor-chip" style="border-color:#7c6cf4;color:#c4b5fd">combined [1536]</div>
+    </div>
+    <div id="mlp-flow"></div>
+  </div>
+</section>
+
+<!-- ═══════════ LOSS ═══════════ -->
+<section id="loss" class="fade-in">
+  <div class="section-label">Step 9 — Loss Calculation</div>
+  <h2>Three-Component <span class="grad-text">Loss Function</span></h2>
+
+  <div class="card-row" style="margin-top:1.5rem">
+    <div class="card">
+      <div class="tag tag-bond">Regression  w=1.0</div>
+      <h3 style="margin-top:.7rem">SmoothL1 (Huber) Loss</h3>
+      <p style="font-size:.8rem">|pred − target| = 0.0095 &lt; 1.0</p>
+      <p class="mono" style="font-size:.78rem;color:#7dd3fc">L_reg = 0.5 × 0.0095² = <strong>0.000045</strong></p>
+      <div class="loss-bar-wrap" style="margin-top:.8rem"><div class="loss-bar" style="width:90%;background:#2d5faf;color:#fff">0.000045</div></div>
+    </div>
+    <div class="card">
+      <div class="tag tag-ring">Ranking  w=0.5×β=0.22</div>
+      <h3 style="margin-top:.7rem">Pairwise Hinge Loss</h3>
+      <p style="font-size:.8rem">Needs ≥2 samples to form pairs.</p>
+      <p class="mono" style="font-size:.78rem;color:#7dd3fc">L_rank = <strong>0.000000</strong> (single sample)</p>
+      <div class="loss-bar-wrap" style="margin-top:.8rem"><div class="loss-bar" style="width:1%;background:#5b3faf;color:transparent">0</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:.5rem">
+    <div class="tag tag-env">Distillation  α=0.03</div>
+    <h3 style="margin-top:.7rem">Cosine Similarity Loss</h3>
+    <p style="font-size:.8rem">L_distill = 1 − cos(student_cls, teacher_cls) = 1 − 0.999998</p>
+    <p class="mono" style="font-size:.78rem;color:#7dd3fc">L_distill = <strong>0.000002</strong></p>
+    <div class="loss-bar-wrap" style="margin-top:.5rem"><div class="loss-bar" style="width:4%;background:#225f3f">0.000002</div></div>
+  </div>
+  <div class="card" style="margin-top:1rem;background:linear-gradient(135deg,#111a30,#12180a)">
+    <h3>Total Loss (α=0.03, β=0.22)</h3>
+    <p class="mono" style="font-size:.85rem;color:#e2e8f0;line-height:2">
+      total = 1.0 × <span style="color:#60a5fa">0.000045</span> + (0.5×0.22) × <span style="color:#a78bfa">0.000000</span> + 0.03 × <span style="color:#4ade80">0.000002</span><br/>
+      <span style="color:#f97316;font-weight:700">= 0.000045</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════ RESULT ═══════════ -->
+<section id="result" class="fade-in">
+  <div class="section-label">Final Prediction</div>
+  <h2>Ground Truth vs <span class="grad-text">Prediction</span></h2>
+
+  <div class="card-row" style="margin-top:1.5rem">
+    <div class="pred-box">
+      <div class="pred-label">Predicted KIBA</div>
+      <div class="pred-num">10.986</div>
+      <div class="pred-label" style="margin-top:.5rem">log1p scale: 2.4837</div>
+    </div>
+    <div class="pred-box" style="background:linear-gradient(135deg,#0f2518,#0c1c10)">
+      <div class="pred-label">Ground Truth KIBA</div>
+      <div class="pred-num" style="background:linear-gradient(135deg,#22c55e,#86efac);-webkit-background-clip:text;-webkit-text-fill-color:transparent">11.100</div>
+      <div class="pred-label" style="margin-top:.5rem">log1p scale: 2.4932</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:1.2rem">
+    <div class="error-badge">✅ Absolute Error: 0.114 raw KIBA &nbsp;|&nbsp; 0.009 log-scale</div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem">
+    <h3>Full Pipeline Summary</h3>
+    <div class="flow" id="summary-flow"></div>
+  </div>
+</section>
+
+<script>
+// ─── INTERSECTION OBSERVER (fade-in) ───
+document.querySelectorAll('.fade-in').forEach(el=>{
+  new IntersectionObserver(([e])=>{if(e.isIntersecting)el.classList.add('visible')},{threshold:.08}).observe(el);
+});
+
+// ─── NAV HIGHLIGHT ───
+document.querySelectorAll('section').forEach(sec=>{
+  new IntersectionObserver(([e])=>{
+    if(e.isIntersecting){
+      document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+      const link=document.querySelector(`nav a[href="#${sec.id}"]`);
+      if(link)link.classList.add('active');
+    }
+  },{threshold:.3}).observe(sec);
+});
+
+// ─── TAB SWITCHER ───
+function switchTab(group,tab){
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(el=>{
+    el.classList.remove('active');
+    const btn=document.querySelector(`button[onclick*="'${group}','${el.id.replace(group+'-','')}"]`);
+    if(btn)btn.classList.remove('active');
+  });
+  document.getElementById(`${group}-${tab}`).classList.add('active');
+  const activeBtn=document.querySelector(`button[onclick*="'${group}','${tab}'"]`);
+  if(activeBtn)activeBtn.classList.add('active');
+}
+
+// ─── MOLECULE CANVAS ───
+(function drawMolecule(){
+  const c=document.getElementById('mol-canvas');
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  const atoms=[
+    {x:30,y:120,sym:'N',col:'#60a5fa'},
+    {x:80,y:85,sym:'N',col:'#60a5fa'},
+    {x:140,y:80,sym:'C',col:'#6b7280'},
+    {x:200,y:55,sym:'C',col:'#6b7280'},
+    {x:260,y:55,sym:'F',col:'#4ade80'},
+    {x:215,y:20,sym:'F',col:'#4ade80'},
+    {x:215,y:90,sym:'F',col:'#4ade80'},
+    {x:155,y:135,sym:'C',col:'#6b7280'},
+    {x:130,y:185,sym:'C',col:'#6b7280'},
+    {x:75,y:195,sym:'C',col:'#6b7280'},
+    {x:55,y:155,sym:'N',col:'#60a5fa'},
+    {x:175,y:195,sym:'C',col:'#6b7280'},
+    {x:185,y:155,sym:'C',col:'#6b7280'},
+    {x:230,y:175,sym:'C',col:'#6b7280'},
+    {x:270,y:150,sym:'C',col:'#6b7280'},
+    {x:265,y:110,sym:'C',col:'#6b7280'},
+    {x:318,y:130,sym:'Cl',col:'#f97316'},
+    {x:225,y:215,sym:'C',col:'#6b7280'},
+    {x:275,y:215,sym:'C',col:'#6b7280'},
+    {x:310,y:185,sym:'N',col:'#60a5fa'},
+    {x:335,y:165,sym:'O',col:'#f87171'},
+  ];
+  const bonds=[[0,1],[1,2],[2,3],[3,4],[3,5],[3,6],[2,7],[7,8],[8,9],[9,10],[10,0],[7,12],[12,11],[11,8],[12,15],[15,14],[14,13],[13,11],[15,16],[13,17],[17,18],[18,19],[19,10],[19,20]];
+  const rings=[[1,2,7,9,10,0],[7,8,11,12],[12,13,14,15]];
+
+  ctx.fillStyle='#0b0d1a';ctx.fillRect(0,0,W,H);
+  // ring highlights
+  rings.forEach((r,i)=>{
+    ctx.beginPath();
+    r.forEach((ai,j)=>{
+      const a=atoms[ai];
+      if(j===0)ctx.moveTo(a.x,a.y);else ctx.lineTo(a.x,a.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle=['rgba(124,108,244,.15)','rgba(56,217,245,.12)','rgba(124,108,244,.15)'][i];
+    ctx.fill();
+  });
+  // bonds
+  ctx.lineWidth=1.8;
+  bonds.forEach(([a,b])=>{
+    ctx.strokeStyle='#374151';
+    ctx.beginPath();ctx.moveTo(atoms[a].x,atoms[a].y);ctx.lineTo(atoms[b].x,atoms[b].y);ctx.stroke();
+  });
+  // atom circles
+  atoms.forEach(a=>{
+    ctx.beginPath();ctx.arc(a.x,a.y,10,0,Math.PI*2);
+    ctx.fillStyle='#0b0d1a';ctx.fill();
+    ctx.strokeStyle=a.col;ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=a.col;ctx.font='bold 8px Inter';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(a.sym,a.x,a.y);
+  });
+})();
+
+// ─── ATOM FEATURES GRID ───
+(function buildFeatGrid(){
+  const feat=[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,4,0.12,0];
+
+  // ── Feature group definitions ──────────────────────────────────────
+  const groups=[
+    {name:'Atom Type',        start:0,  end:15, col:'#a78bfa', type:'one-hot (16)',
+     items:'C, N, O, F, P, S, Cl, Br, I, Si, B, Na, K, Ca, Fe, unknown',
+     desc:'Which element is this atom? The active index tells you the element.'},
+    {name:'Degree',           start:16, end:20, col:'#60a5fa', type:'one-hot (5)',
+     items:'0, 1, 2, 3, 4+',
+     desc:'Number of neighbouring atoms (graph degree). Active index = degree value.'},
+    {name:'Num Implicit H',   start:21, end:25, col:'#34d399', type:'one-hot (5)',
+     items:'0, 1, 2, 3, 4+',
+     desc:'Implicit hydrogen count. Active index = number of implicit H atoms.'},
+    {name:'Hybridization',    start:26, end:30, col:'#f97316', type:'one-hot (5)',
+     items:'SP, SP2, SP3, SP3D, SP3D2',
+     desc:'Orbital hybridization state. Determines geometry (linear / planar / tetrahedral…).'},
+    {name:'Formal Charge',    start:31, end:38, col:'#f43f5e', type:'one-hot (8)',
+     items:'−3, −2, −1, 0, +1, +2, +3, other',
+     desc:'Formal charge on the atom. Most atoms are 0. Charged sites affect binding.'},
+    {name:'Radical e⁻',       start:39, end:41, col:'#fb923c', type:'one-hot (3)',
+     items:'0, 1, 2+',
+     desc:'Number of unpaired (radical) electrons. Usually 0 for stable molecules.'},
+    {name:'Ring & Aromatic',  start:42, end:45, col:'#22d3ee', type:'binary flags (4)',
+     items:'in_ring, is_aromatic, chiral_CW, chiral_CCW',
+     desc:'Structural flags: ring membership, aromaticity, and chirality direction.'},
+    {name:'Total Hs',         start:46, end:46, col:'#fbbf24', type:'integer',
+     items:'0 – 4',
+     desc:'Total hydrogen count (implicit + explicit). Different from the one-hot version above.'},
+    {name:'Atomic Mass',      start:47, end:47, col:'#4ade80', type:'float (÷100)',
+     items:'~0.01 (H) – ~2.07 (Pb)',
+     desc:'Normalized atomic mass. Provides continuous chemical-weight information.'},
+    {name:'Ring Membership',  start:48, end:48, col:'#818cf8', type:'binary',
+     items:'0 or 1',
+     desc:'1 if the atom participates in any ring system; 0 otherwise.'},
+  ];
+
+  // helper: find group for index
+  function groupOf(i){return groups.find(g=>i>=g.start&&i<=g.end);}
+
+  // ── Tooltip element ──────────────────────────────────────────────────
+  let tip=document.getElementById('feat-tip');
+  if(!tip){
+    tip=document.createElement('div');tip.id='feat-tip';document.body.appendChild(tip);
+  }
+  function showTip(e,i,v,g){
+    tip.innerHTML=`
+      <div class="ft-group" style="color:${g.col}">${g.name}</div>
+      <div class="ft-range">Indices&nbsp;${g.start}–${g.end} &nbsp;·&nbsp; ${g.end-g.start+1} dim${g.end>g.start?'s':''}</div>
+      <span class="ft-type" style="background:${g.col}22;color:${g.col}">${g.type}</span>
+      <div class="ft-desc">${g.desc}</div>
+      <div class="ft-desc" style="color:#7dd3fc">Values: ${g.items}</div>
+      <div>This cell → index&nbsp;<b>${i}</b>&nbsp; value&nbsp;<span class="ft-val">${typeof v==='number'&&v%1!==0?v.toFixed(4):v}</span></div>`;
+    tip.style.opacity='1';
+    moveTip(e);
+  }
+  function moveTip(e){
+    const x=e.clientX+14,y=e.clientY-10;
+    tip.style.left=Math.min(x,window.innerWidth-290)+'px';
+    tip.style.top=Math.max(y,8)+'px';
+  }
+  function hideTip(){tip.style.opacity='0';}
+
+  // ── Group rail (coloured segments above cells) ────────────────────
+  const rail=document.getElementById('feat-rail');
+  groups.forEach(g=>{
+    const count=g.end-g.start+1;
+    const seg=document.createElement('div');
+    seg.className='group-seg';
+    seg.style.cssText=`width:${count*25}px;min-width:${count*25}px;background:${g.col}18;
+      color:${g.col};border:1px solid ${g.col}44;border-bottom:none;flex-shrink:0`;
+    seg.textContent=count>2?g.name:'';
+    seg.title=`${g.name} (idx ${g.start}–${g.end})`;
+    rail.appendChild(seg);
+  });
+
+  // ── Feature cells ─────────────────────────────────────────────────
+  const container=document.getElementById('feat-grid');
+  const cells=[];
+  feat.forEach((v,i)=>{
+    const g=groupOf(i);
+    const active=v>0;
+    const el=document.createElement('div');
+    el.className='feat-cell';
+    el.style.cssText=`background:${active?g.col+'22':'#0e1025'};
+      color:${active?g.col:'#374151'};
+      border:1px solid ${active?g.col+'66':'#1f2340'};`;
+    el.textContent=v===0?'0':Number.isInteger(v)?v:v.toFixed(2);
+    el.addEventListener('mouseenter',e=>showTip(e,i,v,g));
+    el.addEventListener('mousemove',moveTip);
+    el.addEventListener('mouseleave',hideTip);
+    container.appendChild(el);
+    cells.push({el,g});
+  });
+
+  // ── Legend chips ──────────────────────────────────────────────────
+  const legend=document.getElementById('feat-legend');
+  let activeGroup=null;
+  groups.forEach(g=>{
+    const chip=document.createElement('div');
+    chip.style.cssText=`display:flex;align-items:center;gap:.3rem;background:${g.col}18;
+      border:1px solid ${g.col}44;border-radius:6px;padding:.2rem .5rem;
+      font-size:.68rem;font-weight:700;color:${g.col};cursor:pointer;transition:all .2s;white-space:nowrap`;
+    chip.innerHTML=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${g.col}"></span>
+      ${g.name} <span style="opacity:.6;font-weight:400">${g.start}–${g.end}</span>`;
+    chip.title=`${g.name}: indices ${g.start}–${g.end} (${g.end-g.start+1} dims, ${g.type})`;
+    chip.addEventListener('click',()=>{
+      if(activeGroup===g.name){
+        // deselect
+        activeGroup=null;
+        cells.forEach(({el})=>el.classList.remove('hl-dim','hl-bright'));
+        chip.style.outline='none';
+      } else {
+        activeGroup=g.name;
+        legend.querySelectorAll('div').forEach(c=>c.style.outline='none');
+        chip.style.outline=`2px solid ${g.col}`;
+        cells.forEach(({el,g:cg})=>{
+          if(cg.name===g.name){el.classList.add('hl-bright');el.classList.remove('hl-dim');}
+          else{el.classList.add('hl-dim');el.classList.remove('hl-bright');}
+        });
+      }
+    });
+    legend.appendChild(chip);
+  });
+})();
+
+// ─── EDGE TABLE ───
+(function buildEdgeTable(){
+  const tb=document.getElementById('edge-table');
+  const edges=[
+    [0,'bond','[0,1]','C-N single bond'],
+    [1,'bond','[1,2]','N-C single bond'],
+    [2,'bond','[2,3]','C-C(F₃) bond'],
+    [3,'bond','[3,4]','C-F bond'],
+    [4,'bond','[4,5]','C-F bond'],
+    [5,'bond','[4,6]','C-F bond'],
+    ['…','bond','…','20 more bond edges'],
+    [23,'ring','[0,1,2,7,9,10]','Pyrazole ring'],
+    [24,'ring','[7,8,11,12]','Imidazole ring'],
+    [25,'ring','[12,13,14,15]','Benzene ring'],
+    [26,'env','[0,…]','Env around atom 0 (N)'],
+    [27,'env','[1,…]','Env around atom 1 (N)'],
+    ['…','env','…','19 more env hyperedges'],
+  ];
+  const tagClass={bond:'tag-bond',ring:'tag-ring',env:'tag-env'};
+  edges.forEach(([idx,type,atoms,desc])=>{
+    const tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid var(--border)';
+    tr.innerHTML=`
+      <td style="padding:.35rem .6rem;color:var(--muted)">${idx}</td>
+      <td style="padding:.35rem .6rem"><span class="tag ${tagClass[type]}">${type}</span></td>
+      <td style="padding:.35rem .6rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#a5b4fc">${atoms}</td>
+      <td style="padding:.35rem .6rem;font-size:.8rem;color:#9ca3af">${desc}</td>`;
+    tb.appendChild(tr);
+  });
+})();
+
+// ─── MESSAGE PASSING STEPS ───
+(function buildMPSteps(){
+  const container=document.getElementById('mp-steps');
+  const steps=[
+    {label:'Layer 1',color:'#60a5fa',mean:'0.086',max:'3.781',delta:'Δ0.225'},
+    {label:'Layer 2',color:'#a78bfa',mean:'0.100',max:'4.222',delta:'Δ0.193'},
+    {label:'Layer 3',color:'#38d9f5',mean:'0.043',max:'4.438',delta:'Δ0.145'},
+  ];
+  steps.forEach(s=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem;flex-wrap:wrap';
+    d.innerHTML=`
+      <div style="width:90px;font-size:.78rem;font-weight:700;color:${s.color}">${s.label}</div>
+      <div style="flex:1;background:#0b0d1a;border-radius:6px;height:28px;position:relative;border:1px solid #1f2340;overflow:hidden">
+        <div style="height:100%;width:${parseFloat(s.max)/5*100}%;background:${s.color}22;border-radius:6px;transition:width 1s ease"></div>
+        <span style="position:absolute;left:.5rem;top:50%;transform:translateY(-50%);font-size:.72rem;color:${s.color};font-family:'JetBrains Mono',monospace">mean=${s.mean}  max=${s.max}</span>
+      </div>
+      <span style="font-size:.75rem;color:var(--muted)">${s.delta}</span>`;
+    container.appendChild(d);
+  });
+})();
+
+// ─── TOKEN VIZ ───
+(function buildTokenViz(){
+  const c=document.getElementById('token-viz');
+  for(let i=0;i<64;i++){
+    const el=document.createElement('div');
+    el.style.cssText=`width:14px;height:14px;border-radius:3px;`;
+    if(i===0)el.style.background='#f97316';
+    else if(i<42)el.style.background='#166534';
+    else el.style.background='#1f2937';
+    el.title=i===0?'CLS token':i<42?`Token ${i}`:`Padding`;
+    c.appendChild(el);
+  }
+  const more=document.createElement('span');
+  more.style.cssText='font-size:.75rem;color:var(--muted);align-self:center';
+  more.textContent='… 1024 total';
+  c.appendChild(more);
+})();
+
+// ─── D2P ATTENTION CANVAS ───
+(function drawD2PAttn(){
+  const c=document.getElementById('d2p-canvas');
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  // fake attention weights for 1024 positions (sparse high at 173,153,171,39,168)
+  const weights=new Float32Array(1024).fill(0.0002);
+  const peaks=[[173,0.247],[153,0.181],[171,0.076],[39,0.074],[168,0.067],[160,0.040],[170,0.035],[155,0.028],[172,0.020],[150,0.015]];
+  peaks.forEach(([pos,w])=>weights[pos]=w);
+  ctx.fillStyle='#0b0d1a';ctx.fillRect(0,0,W,H);
+  const bw=W/1024;
+  for(let i=0;i<1024;i++){
+    const v=Math.min(weights[i]*4,.99);
+    const r=Math.round(11+v*45),g=Math.round(13+v*204),b=Math.round(26+v*222);
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    ctx.fillRect(i*bw,0,(bw+.5),H);
+  }
+  // mark top peaks
+  peaks.slice(0,5).forEach(([pos,w])=>{
+    const x=pos*bw;
+    ctx.fillStyle='#fff8';ctx.fillRect(x-1,0,3,H);
+    ctx.fillStyle='#fff';ctx.font='bold 9px Inter';ctx.textAlign='center';
+    ctx.fillText(pos,x,H-4);
+  });
+})();
+
+// ─── D2P TOP POSITIONS ───
+(function buildD2PTop(){
+  const c=document.getElementById('d2p-top');
+  const tops=[[173,0.2472],[153,0.1805],[171,0.0765],[39,0.0738],[168,0.0666]];
+  tops.forEach(([pos,w])=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;align-items:center;gap:.7rem;margin:.3rem 0';
+    d.innerHTML=`<span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;width:64px;color:#60a5fa">pos ${pos}</span>
+      <div style="flex:1;background:#0e1025;border-radius:6px;height:20px;position:relative;overflow:hidden">
+        <div style="height:100%;width:${w*380}%;background:linear-gradient(90deg,#38d9f5,#7c6cf4);border-radius:6px;transition:width 1.2s ease"></div>
+      </div>
+      <span style="font-size:.78rem;font-family:'JetBrains Mono',monospace;color:#e2e8f0;width:60px">${(w*100).toFixed(1)}%</span>`;
+    c.appendChild(d);
+  });
+})();
+
+// ─── P2D ATOM CANVAS ───
+(function drawP2DAttn(){
+  const c=document.getElementById('p2d-canvas');
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  const atomWeights=[0.594,0.08,0.06,0.05,0.03,0.02,0.02,0.02,0.02,0.02,0.015,0.015,0.01,0.01,0.01,0.008,0.008,0.006,0.005,0.005,0.004];
+  ctx.fillStyle='#0b0d1a';ctx.fillRect(0,0,W,H);
+  const bw=W/21;
+  atomWeights.forEach((w,i)=>{
+    const v=w/0.594;
+    const r=Math.round(11+v*45),g=Math.round(13+v*204),b=Math.round(26+v*222);
+    ctx.fillStyle=`rgb(${r},${g},${b})`;
+    ctx.fillRect(i*bw+1,0,bw-2,H);
+    ctx.fillStyle=v>.3?'#fff':'#6b7280';ctx.font=`bold 9px Inter`;ctx.textAlign='center';
+    ctx.fillText(i,i*bw+bw/2,H-4);
+  });
+})();
+
+// ─── MLP FLOW ───
+(function buildMLPFlow(){
+  const c=document.getElementById('mlp-flow');
+  const steps=[
+    {desc:'Linear(1536 → 1536)','out':'[1,1536]',col:'#60a5fa',note:'mean=−0.936'},
+    {desc:'GELU activation','out':'[1,1536]',col:'#a78bfa',note:'mean=+0.026'},
+    {desc:'Dropout(0.3) [eval=no-op]','out':'[1,1536]',col:'#374151',note:'unchanged'},
+    {desc:'Linear(1536 → 512)','out':'[1,512]',col:'#60a5fa',note:'mean=−1.870'},
+    {desc:'GELU activation','out':'[1,512]',col:'#a78bfa',note:'mean=−0.042'},
+    {desc:'Dropout(0.3) [eval=no-op]','out':'[1,512]',col:'#374151',note:'unchanged'},
+    {desc:'Linear(512 → 1)','out':'[1,1]',col:'#f97316',note:'= 2.4837 ← prediction'},
+  ];
+  steps.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.style.cssText=`display:flex;align-items:center;gap:.7rem;margin-bottom:.35rem;flex-wrap:wrap`;
+    d.innerHTML=`
+      <div style="width:28px;height:28px;border-radius:50%;background:${s.col}22;border:2px solid ${s.col};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:${s.col};flex-shrink:0">${i+1}</div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#e2e8f0;min-width:180px">${s.desc}</span>
+      <span class="tensor-chip" style="border-color:${s.col}44;color:${s.col}">${s.out}</span>
+      <span style="font-size:.75rem;color:var(--muted)">${s.note}</span>`;
+    c.appendChild(d);
+  });
+})();
+
+// ─── SUMMARY FLOW ───
+(function buildSummaryFlow(){
+  const c=document.getElementById('summary-flow');
+  const items=[
+    {icon:'🧪',title:'Drug → Hypergraph','desc':'21 atoms, 47 hyperedges → [21,512] node embs + drug_global [512]'},
+    {icon:'🧬',title:'Protein → ESM-2 35M','desc':'1000 AA → student_cls [512] + protein_seq [1024,512]'},
+    {icon:'🎓',title:'Teacher-Student Fusion','desc':'650M CLS (1280-d) + 35M CLS (512-d) blended at λ=0.5 → injected at pos 0'},
+    {icon:'🔀',title:'Bidirectional Cross-Attention','desc':'D→P: drug_global queries protein → d2p_out [512]; P→D: protein queries drug atoms → p2d_global [512]'},
+    {icon:'🤖',title:'MLP Prediction','desc':'[drug_global ⊕ d2p_out ⊕ p2d_global] → 1536-d → 512-d → 1-d'},
+    {icon:'📊',title:'Predicted KIBA = 10.986','desc':'True KIBA = 11.100 | Error = 0.114'},
+  ];
+  items.forEach(it=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;gap:.8rem;padding:.8rem 0;border-bottom:1px solid var(--border);align-items:flex-start';
+    d.innerHTML=`<span style="font-size:1.4rem;flex-shrink:0">${it.icon}</span>
+      <div><div style="font-weight:700;font-size:.9rem;margin-bottom:.2rem">${it.title}</div>
+      <div style="font-size:.78rem;color:var(--muted)">${it.desc}</div></div>`;
+    c.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>
